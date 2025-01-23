@@ -1,0 +1,32 @@
+{
+  "name": "node-api-boilerplate",
+  "version": "1.0.0",
+  "description": "API Boilerplate build on Node.js, Express and Sequelize with a MySQL database as data source.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Webudvikler-TechCollege/Node-API-Boilerplate.git"
+  },
+  "author": "Heinz K / TechCollege January 2025",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Webudvikler-TechCollege/Node-API-Boilerplate/issues"
+  },
+  "homepage": "https://github.com/Webudvikler-TechCollege/Node-API-Boilerplate#readme",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "csv-parser": "^3.1.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "fs": "^0.0.1-security",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.12.0",
+    "path": "^0.12.7",
+    "sequelize": "^6.37.5"
+  }
+}
