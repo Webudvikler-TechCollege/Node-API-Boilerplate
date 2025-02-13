@@ -1,0 +1,31 @@
+{
+  "name": "Node API Boilerplate",
+  "version": "1.0.0",
+  "description": "Template for API - Node.js, Express, Sequelize",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Webudvikler-TechCollege/Node-API-Boilerplate"
+  },
+  "author": "Heinz K @ TechCollege",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Webudvikler-TechCollege/Node-API-Boilerplate/issues"
+  },
+  "homepage": "https://github.com/Webudvikler-TechCollege/Node-API-Boilerplate#readme",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "fs": "^0.0.1-security",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.12.0",
+    "path": "^0.12.7",
+    "sequelize": "^6.37.5"
+  }
+}
