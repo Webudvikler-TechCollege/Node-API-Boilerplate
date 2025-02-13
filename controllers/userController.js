@@ -1,133 +1,92 @@
 import express from 'express';
-import { userModel } from '../models/userModel.js';
+import { userModel as model } from '../models/userModel.js';
+import { errorResponse, successResponse } from '../utils/mainUtils.js';
+import { Authorize } from '../utils/authUtils.js';
 
-export const userController = express.Router();
+export const tempController = express.Router();
+const url = 'users'
 
 /**
- * READ: Fetch all users from the database
+ * READ: Fetch all records from the database
  */
-userController.get('/users', async (req, res) => {
+tempController.get(`/${url}`, Authorize, async (req, res) => {
     try {
-        let users = await userModel.findAll();
+        const list = await model.findAll();
 
-        // Check if no users are found
-        if (!users || users.length === 0) {
-            return res.status(404).json({ message: "No users found" });
+        // Check if no data is found
+        if (!list || list.length === 0) {
+            return errorResponse(res, `No users found`, 404)
         }
 
-        res.json(users);
+        successResponse(res, list);
     } catch (error) {
-        console.error("Error retrieving user list:", error);
-        res.status(500).send({
-            message: `Error fetching user list: ${error.message}`
-        });
+        errorResponse(res, `Error fetching users: ${error.message}`);
     }
 });
 
 /**
- * READ: Fetch a single user by ID
+ * READ: Fetch a single record by ID
  */
-userController.get('/users/:id([0-9]*)', async (req, res) => {
+tempController.get(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
 
-        let user = await userModel.findOne({
+        let details = await model.findOne({
             where: { id: id }
         });
 
-        // If no user is found, return a 404 error
-        if (!user) {
-            return res.status(404).json({ message: "No user found" });
-        }
+        if (!details) return errorResponse(res, `User not found`, 404);
 
-        res.json(user);
+        successResponse(res, details);
     } catch (error) {
-        console.error("Error retrieving user:", error);
-        res.status(500).json({
-            message: `Error fetching user: ${error.message}`
-        });
+        errorResponse(res, `Error fetching User details: ${error.message}`);
     }
 });
 
 /**
- * CREATE: Add a new user to the database
+ * CREATE: Add a new record to the database
  */
-userController.post('/users', async (req, res) => {
-    let { firstname, lastname, email, password, refresh_token, is_active } = req.body;
-
-    // Validate that all required fields are provided
-    if (!firstname || !lastname || !email || !password || !refresh_token || is_active === undefined) {
-        return res.status(400).json({ message: "All fields must be filled out" });
-    }
-
+tempController.post(`/${url}`, Authorize, async (req, res) => {
     try {
-        // Create a new user record in the database
-        const result = await userModel.create({ firstname, lastname, email, password, refresh_token, is_active });
-        res.status(201).json(result);
+        let { firstname, lastname, email, password, refresh_token, is_active } = req.body;
+        const result = await model.create({ firstname, lastname, email, password, refresh_token, is_active });
+        successResponse(res, result, `User created successfully`, 201);
     } catch (error) {
-        console.error("Error creating user:", error);
-        res.status(500).json({ message: `Error creating user: ${error.message}` });
+        errorResponse(res, `Error creating user`, error);
     }
 });
 
 /**
- * UPDATE: Update an existing user
+ * UPDATE: Update an existing record
  */
-userController.put('/users', async (req, res) => {
-    let { id, firstname, lastname, email, password, refresh_token, is_active } = req.body;
-
-    // Validate that all required fields are provided
-    if (!id || !firstname || !lastname || !email || !password || !refresh_token || is_active === undefined) {
-        return res.status(400).json({ message: "All fields must be filled out" });
-    }
-
+tempController.put(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
     try {
-        // Attempt to update the user in the database
-        const result = await userModel.update(
-            { firstname, lastname, email, password, refresh_token, is_active }, // Update only relevant fields
-            { where: { id } }
-        );
+        const { id } = req.params;
+        const { firstname, lastname, email, password, refresh_token, is_active } = req.body;
 
-        // If no rows were updated, the user ID does not exist
-        if (result[0] === 0) {
-            return res.status(404).json({ message: `No user found with ID: ${id}` });
-        }
+        const [updated] = await model.update({ firstname, lastname, email, password, refresh_token, is_active }, { where: { id } });
 
-        res.status(200).json({ message: `User with ID ${id} updated successfully.` });
+        if (!updated) return errorResponse(res, `No user found with ID: ${id}`, 404);
+
+        successResponse(res, { id, zipcode, name }, `User updated successfully`);
+
     } catch (error) {
-        console.error("Error updating user:", error);
-        res.status(500).send({
-            message: `Error updating user: ${error.message}`
-        });
+        errorResponse(res, `Error updating user`, error);
     }
 });
 
 /**
- * DELETE: Remove a user by ID
+ * DELETE: Remove a record by ID
  */
-userController.delete('/users/:id([0-9]*)', async (req, res) => {
-    const { id } = req.params; // Extract the user ID from the URL parameters
+tempController.delete(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deleted = await model.destroy({ where: { id } });
 
-    if (id) { // Check if an ID is provided
-        try {
-            // Attempt to delete the user from the database
-            await userModel.destroy({
-                where: { id }, // Delete the record where the ID matches
-            });
+        if (!deleted) return errorResponse(res, `No user found with ID: ${id}`, 404);
 
-            res.status(200).send({
-                message: `User deleted successfully`, // Success response
-            });
-        } catch (error) {
-            console.error("Error deleting user:", error);
-            res.status(500).send({
-                message: `Could not delete user: ${error.message}`, // Error message
-            });
-        }
-    } else {
-        // Send a 400 Bad Request error if the ID is missing or invalid
-        res.status(400).send({
-            message: "Invalid ID",
-        });
+        successResponse(res, null, `User deleted successfully`);
+    } catch (error) {
+        errorResponse(res, `Error deleting user: ${error.message}`);
     }
 });
