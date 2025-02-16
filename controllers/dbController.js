@@ -2,7 +2,8 @@ import express from 'express';
 import sequelize from '../config/sequelizeConfig.js';
 import { seedFromCsv } from '../utils/seedUtils.js';
 import { userModel } from '../models/userModel.js';
-import { tempModel } from '../models/tempModel.js';
+import { exampleModel } from '../models/exampleModel.js';
+import { errorResponse, successResponse } from '../utils/responseUtils.js';
 
 export const dbController = express.Router();
 
@@ -10,11 +11,9 @@ export const dbController = express.Router();
 dbController.get('/test', async (req, res) => {	
 	try {
 		await sequelize.authenticate();
-		console.log('Database connection successful');
-		res.status(200).json({ message: 'Database connection successful' });
+		successResponse(res,'','Database connection successful')
 	} catch (error) {
-		console.error('Error! Could not connect to the database:', error);
-		res.status(500).json({ error: 'Could not connect to the database' });
+		errorResponse(res,'Could not connect to the database')
 	}
 });
 
@@ -23,21 +22,32 @@ dbController.get('/sync', async (req, res) => {
 	try {
 		const forceSync = req.query.force === 'true';
 		await sequelize.sync({ force: forceSync });
-
-		res.send(`Database synchronized ${forceSync ? 'with force' : 'without force'}`);
-	} catch (err) {
-		res.status(500).json({ error: err.message });
+		successResponse(res,'',`Database synchronized ${forceSync ? 'with force' : 'without force'}`)
+	} catch (error) {
+		errorResponse(res,`Synchronize failed!`, error)
 	}
 });
 
 // Seed database from CSV files
 dbController.get('/seedfromcsv', async (req, res) => {
 	try {
-		await seedFromCsv('user.csv', userModel);
-		await seedFromCsv('temp.csv', tempModel);
+		// Array med seed filer og models
+		const files_to_seed = [
+			{ file: 'user.csv', model: userModel },
+			{ file: 'example.csv', model: exampleModel }
+		]
+		// Array til svar
+		const files_seeded = []
 
-		res.send({ message: 'Seeding completed' });
-	} catch (err) {
-		res.status(500).json({ error: err.message });
+		// Sync'er database
+		await sequelize.sync({ force: true });
+
+		// Looper og seeder filer til modeller
+		for(let item of files_to_seed) {
+			files_seeded.push(await seedFromCsv(item.file, item.model))	
+		}
+		successResponse(res,{ 'Files seeded': files_seeded},`Seeding completed!`,)
+	} catch (error) {
+		errorResponse(res,`Seeding failed!`, error)
 	}
 });

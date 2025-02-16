@@ -7,7 +7,13 @@
  * @param {number} [statusCode=200] - HTTP-statuskode for svaret (default er 200 OK).
  */
 export const successResponse = (res, data, message = "Success", statusCode = 200) => {
-    res.status(statusCode).json({ message, data });
+    const response = { message };
+    // Inkluder data, hvis den er "true"
+    if (data) { 
+        response.data = data;
+    }
+
+    res.status(statusCode).json(response);
 };
 
 /**
@@ -17,9 +23,7 @@ export const successResponse = (res, data, message = "Success", statusCode = 200
  * @param {string} [message="Internal Server Error"] - En valgfri fejlbesked, der beskriver fejlen (default er "Internal Server Error").
  * @param {number} [statusCode=500] - HTTP-statuskode for fejlen (default er 500 Internal Server Error).
  */
-export const errorResponse = (res, message = "Internal Server Error", error = {}, statusCode = 500) => {
-    console.error({error});
-    
+export const errorResponse = (res, message = "Internal Server Error", error = {}, statusCode = 500) => {    
     let obj_error = { message: message }
     if (error.name === "SequelizeValidationError") {
         obj_error.sequlize_validation_errors = error.errors.map(err => ({

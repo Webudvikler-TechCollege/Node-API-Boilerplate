@@ -2,18 +2,22 @@ import express from 'express'
 import { dbController } from './Controllers/dbController.js'
 import { userController } from './controllers/userController.js'
 import { authController } from './controllers/authController.js'
-import { tempController } from './controllers/tempController.js'
+import { exampleController } from './controllers/exampleController.js'
+import { Relations } from "./models/relations.js";
 
 const app = express()
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
+
+// Test 2025 - Sætter alle db relationer op i seperat fil
+Relations();
 
 app.get('/', (req, res) => {
     res.send('Hello world')
 })
 
 app.use(
-    tempController,
+    exampleController,
     userController,
     authController,
     dbController

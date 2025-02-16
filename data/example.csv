@@ -1,0 +1,2 @@
+"id","string_field","text_field","date_field","boolean_field","integer_field","float_field","enum_field","json_field","user_id"
+1,"Ikke navngivet","Eksempel på indhold","2025-02-11",1,100,199.99,option1,"[{""type"":""json""}]",1

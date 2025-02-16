@@ -1,17 +1,19 @@
 import express from 'express';
 import { userModel as model } from '../models/userModel.js';
-import { errorResponse, successResponse } from '../utils/mainUtils.js';
+import { errorResponse, successResponse } from '../utils/responseUtils.js';
 import { Authorize } from '../utils/authUtils.js';
 
-export const tempController = express.Router();
+export const userController = express.Router();
 const url = 'users'
 
 /**
  * READ: Fetch all records from the database
  */
-tempController.get(`/${url}`, Authorize, async (req, res) => {
+userController.get(`/${url}`, Authorize, async (req, res) => {
     try {
-        const list = await model.findAll();
+        const list = await model.findAll({
+            attributes: ['id', 'firstname', 'lastname', 'email']
+        });
 
         // Check if no data is found
         if (!list || list.length === 0) {
@@ -27,11 +29,12 @@ tempController.get(`/${url}`, Authorize, async (req, res) => {
 /**
  * READ: Fetch a single record by ID
  */
-tempController.get(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
+userController.get(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
 
         let details = await model.findOne({
+            attributes: ['id', 'firstname', 'lastname', 'email', 'is_active', 'createdAt', 'updatedAt'],
             where: { id: id }
         });
 
@@ -46,7 +49,7 @@ tempController.get(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
 /**
  * CREATE: Add a new record to the database
  */
-tempController.post(`/${url}`, Authorize, async (req, res) => {
+userController.post(`/${url}`, Authorize, async (req, res) => {
     try {
         let { firstname, lastname, email, password, refresh_token, is_active } = req.body;
         const result = await model.create({ firstname, lastname, email, password, refresh_token, is_active });
@@ -59,7 +62,7 @@ tempController.post(`/${url}`, Authorize, async (req, res) => {
 /**
  * UPDATE: Update an existing record
  */
-tempController.put(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
+userController.put(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
     try {
         const { id } = req.params;
         const { firstname, lastname, email, password, refresh_token, is_active } = req.body;
@@ -78,7 +81,7 @@ tempController.put(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
 /**
  * DELETE: Remove a record by ID
  */
-tempController.delete(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
+userController.delete(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
     try {
         const { id } = req.params;
         const deleted = await model.destroy({ where: { id } });

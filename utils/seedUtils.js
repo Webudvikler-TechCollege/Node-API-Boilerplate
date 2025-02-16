@@ -32,12 +32,13 @@ const seedFromCsv = async (fileName, model) => {
     try {
         const data = await getCsvData(fileName);
         await model.bulkCreate(data, { transaction });
-
         await transaction.commit();
         console.log(`Seeding completed for ${fileName}`);
+        return fileName;
     } catch (error) {
         await transaction.rollback();
         console.error('Seeding error:', error);
+        return false;
     }
 };
 
