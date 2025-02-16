@@ -20,7 +20,7 @@ exampleModel.init({
     allowNull: false,
     defaultValue: 'Default String',
     validate: {
-      len: { args: [5, 100], msg: "String must be between 5 and 100 characters" },
+      len: { args: [1, 100], msg: "String must be between 5 and 100 characters" },
     }
   },
   // Tekstfelt uden krav om værdi

@@ -51,8 +51,17 @@ userController.get(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
  */
 userController.post(`/${url}`, Authorize, async (req, res) => {
     try {
-        let { firstname, lastname, email, password, refresh_token, is_active } = req.body;
+        let {
+            firstname,
+            lastname, 
+            email, 
+            password, 
+            refresh_token, 
+            is_active 
+        } = req.body;
+
         const result = await model.create({ firstname, lastname, email, password, refresh_token, is_active });
+        
         successResponse(res, result, `User created successfully`, 201);
     } catch (error) {
         errorResponse(res, `Error creating user`, error);

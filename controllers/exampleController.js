@@ -16,7 +16,7 @@ exampleController.get(`/${url}`, async (req, res) => {
             // Begrænser felter
             attributes: ['string_field', 'integer_field'],
             // Begrænser antal records
-            limit: 1,
+            limit: 3,
             // Sorterer resultat stigende efter felt 
             order: [['string_field', 'ASC']],
             // Inkluderer relationer
@@ -59,9 +59,26 @@ exampleController.get(`/${url}/:id([0-9]+)`, async (req, res) => {
 exampleController.post(`/${url}`, async (req, res) => {
     try {
         // Henter data fra request body
-        const data = req.body;
+        const {
+            string_field,
+            text_field, 
+            date_field, 
+            boolean_field, 
+            integer_field, 
+            float_field,
+            user_id 
+        } = req.body;
+
         // Opretter en ny record
-        const result = await model.create(data);
+        const result = await model.create({
+            string_field,
+            text_field, 
+            date_field, 
+            boolean_field, 
+            integer_field, 
+            float_field,
+            user_id 
+        });
         // Returnerer succesrespons
         successResponse(res, result, `Record created successfully`, 201);
     } catch (error) {
@@ -76,16 +93,32 @@ exampleController.put(`/${url}/:id([0-9]+)`, async (req, res) => {
         // Læser ID fra URL
         const { id } = req.params;
         // Henter data fra request body
-        const data = req.body;
+        const {
+            string_field,
+            text_field, 
+            date_field, 
+            boolean_field, 
+            integer_field, 
+            float_field,
+            user_id 
+        } = req.body;
         // Opdaterer record 
-        const [updated] = await model.update(data, {
+        const [updated] = await model.update({
+            string_field,
+            text_field, 
+            date_field, 
+            boolean_field, 
+            integer_field, 
+            float_field,
+            user_id 
+        }, {
             where: { id }, 
             individualHooks: true // Åbner for hooks i modellen
         });
         // Fejl hvis ingen record findes
         if (!updated) return errorResponse(res, `No record found with ID: ${id}`, 404); 
         // Returnerer succesrespons
-        successResponse(res, { id, ...data }, `Record updated successfully`); 
+        successResponse(res, { id: req.body }, `Record updated successfully`); 
     } catch (error) {
         // Håndterer fejl
         errorResponse(res, `Error updating record: ${error.message}`); 
