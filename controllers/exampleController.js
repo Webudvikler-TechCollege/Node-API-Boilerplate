@@ -2,6 +2,7 @@ import express from 'express';
 import { exampleModel as model } from '../models/exampleModel.js';
 import { errorResponse, successResponse } from '../utils/responseUtils.js';
 import { userModel } from '../models/userModel.js';
+import { getQueryAttributes, getQueryLimit, getQueryOrder } from '../utils/apiUtils.js';
 
 // Opretter en ny Express-router til denne controller
 export const exampleController = express.Router();
@@ -14,11 +15,11 @@ exampleController.get(`/${url}`, async (req, res) => {
         // Henter liste af records fra modellen
         const list = await model.findAll({
             // Begrænser felter
-            attributes: ['string_field', 'integer_field'],
+            attributes: getQueryAttributes(req.query, 'string_field,integer_field'),
             // Begrænser antal records
-            limit: 3,
+            limit: getQueryLimit(req.query),
             // Sorterer resultat stigende efter felt 
-            order: [['string_field', 'ASC']],
+            order: getQueryOrder(req.query),
             // Inkluderer relationer
             include: [
                 {

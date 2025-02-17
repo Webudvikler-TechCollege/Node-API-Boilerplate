@@ -2,6 +2,7 @@ import express from 'express';
 import { userModel as model } from '../models/userModel.js';
 import { errorResponse, successResponse } from '../utils/responseUtils.js';
 import { Authorize } from '../utils/authUtils.js';
+import { getQueryAttributes, getQueryOrder } from '../utils/apiUtils.js';
 
 export const userController = express.Router();
 const url = 'users'
@@ -12,7 +13,8 @@ const url = 'users'
 userController.get(`/${url}`, Authorize, async (req, res) => {
     try {
         const list = await model.findAll({
-            attributes: ['id', 'firstname', 'lastname', 'email']
+            attributes: getQueryAttributes(req.query, 'firstname'),
+            order: getQueryOrder(req.query)
         });
 
         // Check if no data is found
@@ -51,19 +53,14 @@ userController.get(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
  */
 userController.post(`/${url}`, Authorize, async (req, res) => {
     try {
-        let {
-            firstname,
-            lastname, 
-            email, 
-            password, 
-            refresh_token, 
-            is_active 
-        } = req.body;
-
-        const result = await model.create({ firstname, lastname, email, password, refresh_token, is_active });
-        
+        // Henter data fra request body
+        const data = req.body;
+        // Opretter en ny record
+        const result = await model.create(data);
+        // Returnerer succesrespons
         successResponse(res, result, `User created successfully`, 201);
     } catch (error) {
+        // Håndterer fejl
         errorResponse(res, `Error creating user`, error);
     }
 });
@@ -73,16 +70,21 @@ userController.post(`/${url}`, Authorize, async (req, res) => {
  */
 userController.put(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
     try {
+        // Læser ID fra URL
         const { id } = req.params;
-        const { firstname, lastname, email, password, refresh_token, is_active } = req.body;
-
-        const [updated] = await model.update({ firstname, lastname, email, password, refresh_token, is_active }, { where: { id } });
-
-        if (!updated) return errorResponse(res, `No user found with ID: ${id}`, 404);
-
-        successResponse(res, { id, zipcode, name }, `User updated successfully`);
-
+        // Henter data fra request body
+        const data = req.body;
+        // Opdaterer record 
+        const [updated] = await model.update(data, {
+            where: { id }, 
+            individualHooks: true // Åbner for hooks i modellen
+        });
+        // Fejl hvis ingen record findes
+        if (!updated) return errorResponse(res, `No user found with ID: ${id}`, 404); 
+        // Returnerer succesrespons
+        successResponse(res, { id, ...data }, `User updated successfully`); 
     } catch (error) {
+        // Håndterer fejl
         errorResponse(res, `Error updating user`, error);
     }
 });

@@ -2,16 +2,17 @@ import jwt from "jsonwebtoken"
 import dotenv from "dotenv" // Credentials
 import bcrypt from "bcrypt"
 import { userModel } from "../models/userModel.js"
+import { errorResponse, successResponse } from "./responseUtils.js"
 
 dotenv.config()
 
 const Authenticate = async (req, res) => {
-    // Destructure Assignment af username og password fra request body
+  // Destructure Assignment af username og password fra request body
   const { username, password } = req.body
 
   // Hvis brugernavn og password findes...
   if (username && password) {
-    // Henter db user ud fra username
+    // Henter db user u d fra username
     const user_result = await userModel.findOne({
       attributes: ["id", "firstname", "lastname", "password"],
       where: { email: username, is_active: 1 },
@@ -19,7 +20,7 @@ const Authenticate = async (req, res) => {
 
     if (!user_result) {
       // Returner forbidden hvis bruger ikke eksisterer
-      res.sendStatus(401)
+      errorResponse(res, 'No user found', '', 401)
     } else {
       // Deklarerer user objekt af user values
       const data = {
@@ -83,7 +84,7 @@ const Authenticate = async (req, res) => {
           )
 
           // Returnerer access_token til requester
-          return res.json({
+          const token_response = {
             access_token: access_token,
             user: {
               id: `${data.id}`,
@@ -91,16 +92,17 @@ const Authenticate = async (req, res) => {
               lastname: `${data.lastname}`
             },
             created: Date(),
-          })
+          }
+          successResponse(res, token_response)
         } else {
           // Returner 401 Unauthorized
-          return res.sendStatus(401)
+          errorResponse(res, 'You are not authorized', '', 401)
         }
       })
     }
   } else {
-    // Returner 401 Forbidden
-    return res.sendStatus(403)
+    // Returner 403 Forbidden
+    errorResponse(res, 'You are not authorized', '', 403)
   }
 }
 
@@ -113,27 +115,24 @@ const Authenticate = async (req, res) => {
  */
 const Authorize = async (req, res, next) => {
   // Henter access token fra auth header
-  const bearerHeader = req.headers["authorization"]  
-  let access_token;  
+  const bearerHeader = req.headers["authorization"]
+  let access_token;
 
-  if(bearerHeader && bearerHeader.includes('Bearer')) {
+  if (bearerHeader && bearerHeader.includes('Bearer')) {
     access_token = bearerHeader.substr(7) // Remove "Bearer "  
   } else {
-    res.status(401).send({ message: 'Token not accepted' })
+    errorResponse(res, 'Token not accepted', '', 401)
   }
 
   // Bekræfter access_token med access_key
   jwt.verify(access_token, process.env.TOKEN_ACCESS_KEY, (err, data) => {
     if (err) {
-      console.log(err.message);
       switch (err.message) {
         case "jwt malformed":
         case "invalid algorithm":
         case "invalid signature":
           // Returnerer statuskode (403: Forbidden)
-          res.status(403).send({
-            message: err.message
-          })
+          errorResponse(res, err.message, '', 403)
           break
         case "jwt expired":
           // Refresh token
@@ -150,7 +149,7 @@ const Authorize = async (req, res, next) => {
           }).then(record => {
             if (!record?.refresh_token) {
               // Returnerer statuskode (400: Bad Request)
-              res.sendStatus(400)
+              errorResponse(res, 'Refresh token is missing', '', 400)
             } else {
               // Bekræfter brugers refresh_token
               jwt.verify(
@@ -163,13 +162,11 @@ const Authorize = async (req, res, next) => {
                       case "jwt malformed":
                         // Returerner besked om at refresh_token er udløbet
                         // Betyder at bruger skal logge ind igen
-                        res.status(400).send({ 
-                          message: "Refresh token malformed or expired. Please login again." 
-                        })
+                        errorResponse(res, 'Refresh token malformed or expired. Please login again.', '', 400)
                         break
                       case "invalide token":
                         // Returnerer statuskode (400: Bad Request)
-                        res.sendStatus(400)
+                        errorResponse(res, 'Invalid token', '', 400)
                         break
                     }
                   } else {
@@ -197,12 +194,13 @@ const Authorize = async (req, res, next) => {
                       },
                       process.env.TOKEN_ACCESS_KEY
                     )
-
-                    // Returnerer access_token til requester
-                    return res.json({
+                    
+                    const token_message = {
                       access_token: access_token,
                       updated: Date(),
-                    })
+                    }
+                    // Returnerer access_token til requester
+                    successResponse(res, token_message)
                     next()
                   }
                 }
@@ -227,14 +225,14 @@ const Authorize = async (req, res, next) => {
 const getUserFromToken = async (req, res) => {
   const bearerHeader = req.headers["authorization"];
 
-  if(bearerHeader && bearerHeader.includes('Bearer ')) {
+  if (bearerHeader && bearerHeader.includes('Bearer ')) {
     const token = bearerHeader.split(' ')[1]
     try {
       const decodeToken = jwt.verify(token, process.env.TOKEN_ACCESS_KEY)
       const user_id = await decodeToken.data.id
       console.log(user_id);
       return user_id
-    } catch(err) {
+    } catch (err) {
       console.error(err)
     }
   }
@@ -254,7 +252,7 @@ const decodeToken = async (token) => {
       const payload = decoded;
       console.log('Decoded payload:', payload);
     }
-  });  
+  });
 }
 
 export { Authenticate, Authorize, getUserFromToken }
