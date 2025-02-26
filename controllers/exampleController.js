@@ -46,7 +46,7 @@ exampleController.get(`/${url}/:id([0-9]+)`, async (req, res) => {
         // Læser ID fra URL
         const id = parseInt(req.params.id, 10);
         // Finder en enkelt record baseret på ID
-        let details = await model.findOne({ where: { id } });
+        let details = await model.findByPk(id);
         // Fejlhåndtering hvis ingen record matcher
         if (!details) return errorResponse(res, `Record not found`, 404);
         // Returnerer matchende record

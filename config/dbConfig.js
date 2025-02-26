@@ -5,7 +5,7 @@ import dotenv from 'dotenv'
 // Giver adgang til variabler fra en .env-fil via process.env
 dotenv.config()
 
-const sequelize = new Sequelize(
+const dbConfig = new Sequelize(
 	process.env.DBNAME,    // Databasens navn
 	process.env.DBUSER,    // Brugernavn til databasen
 	process.env.DBPASSWD,  // Adgangskode til databasen
@@ -16,4 +16,4 @@ const sequelize = new Sequelize(
 	}
 )
 
-export default sequelize
+export default dbConfig

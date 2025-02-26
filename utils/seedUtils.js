@@ -1,7 +1,7 @@
 import fs from 'fs';
 import csv from 'csv-parser';
 import path from 'path';
-import sequelize from '../config/sequelizeConfig.js';
+import dbConfig from '../config/dbConfig.js';
 
 /**
  * Reads data from a CSV file and returns it as an array of objects.
@@ -27,7 +27,7 @@ const getCsvData = async fileName => {
  * @param {Object} model - The Sequelize model to insert data into.
  */
 const seedFromCsv = async (fileName, model) => {
-    const transaction = await sequelize.transaction();
+    const transaction = await dbConfig.transaction();
 
     try {
         const data = await getCsvData(fileName);

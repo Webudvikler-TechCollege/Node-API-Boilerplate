@@ -1,4 +1,4 @@
-import sequelize from "../config/sequelizeConfig.js"
+import dbConfig from "../config/dbConfig.js"
 import { DataTypes, Model } from "sequelize"
 import { userModel } from "./userModel.js"
 
@@ -71,7 +71,7 @@ exampleModel.init({
   },
 },
   {
-    sequelize, // Sequelize-forbindelsen
+    sequelize: dbConfig, // Sequelize-forbindelsen
     modelName: "example", // Navn på modellen
     timestamps: true, // Tilføjer createdAt og updatedAt felter
     underscored: true, // Bruger underscoring i stedet for camelCase i kolonnenavne

@@ -1,4 +1,4 @@
-import sequelize from "../config/sequelizeConfig.js"
+import dbConfig from "../config/dbConfig.js"
 import { DataTypes, Model } from "sequelize"
 import bcrypt from "bcrypt"
 
@@ -39,7 +39,7 @@ userModel.init(
     },
   },
   {
-    sequelize,
+    sequelize: dbConfig,
     modelName: "user",
     underscored: true,
     hooks: {

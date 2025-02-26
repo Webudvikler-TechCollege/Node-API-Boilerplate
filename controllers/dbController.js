@@ -1,5 +1,5 @@
 import express from 'express';
-import sequelize from '../config/sequelizeConfig.js';
+import dbConfig from '../config/dbConfig.js';
 import { seedFromCsv } from '../utils/seedUtils.js';
 import { userModel } from '../models/userModel.js';
 import { exampleModel } from '../models/exampleModel.js';
@@ -10,7 +10,7 @@ export const dbController = express.Router();
 // Test database connection
 dbController.get('/test', async (req, res) => {	
 	try {
-		await sequelize.authenticate();
+		await dbConfig.authenticate();
 		successResponse(res,'','Database connection successful')
 	} catch (error) {
 		errorResponse(res,'Could not connect to the database')
@@ -21,7 +21,7 @@ dbController.get('/test', async (req, res) => {
 dbController.get('/sync', async (req, res) => {
 	try {
 		const forceSync = req.query.force === 'true';
-		await sequelize.sync({ force: forceSync });
+		await dbConfig.sync({ force: forceSync });
 		successResponse(res,'',`Database synchronized ${forceSync ? 'with force' : 'without force'}`)
 	} catch (error) {
 		errorResponse(res,`Synchronize failed!`, error)
@@ -40,7 +40,7 @@ dbController.get('/seedfromcsv', async (req, res) => {
 		const files_seeded = []
 
 		// Sync'er database
-		await sequelize.sync({ force: true });
+		await dbConfig.sync({ force: true });
 
 		// Looper og seeder filer til modeller
 		for(let item of files_to_seed) {

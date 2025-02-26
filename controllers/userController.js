@@ -35,9 +35,8 @@ userController.get(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
     try {
         const id = parseInt(req.params.id, 10);
 
-        let details = await model.findOne({
-            attributes: ['id', 'firstname', 'lastname', 'email', 'is_active', 'createdAt', 'updatedAt'],
-            where: { id: id }
+        let details = await model.findByPk(id, {
+            attributes: ['id', 'firstname', 'lastname', 'email', 'is_active', 'createdAt', 'updatedAt']
         });
 
         if (!details) return errorResponse(res, `User not found`, 404);
@@ -73,19 +72,54 @@ userController.put(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
         // Læser ID fra URL
         const { id } = req.params;
         // Henter data fra request body
-        const data = req.body;
+        const { firstname, lastname, email, refresh_token, is_active} = req.body;
         // Opdaterer record 
-        const [updated] = await model.update(data, {
-            where: { id }, 
-            individualHooks: true // Åbner for hooks i modellen
+        const [updated] = await model.update({
+            firstname, lastname, email, refresh_token, is_active
+        }, {
+            where: { id }
         });
         // Fejl hvis ingen record findes
         if (!updated) return errorResponse(res, `No user found with ID: ${id}`, 404); 
         // Returnerer succesrespons
-        successResponse(res, { id, ...data }, `User updated successfully`); 
+        successResponse(res, { id }, `User updated successfully`); 
     } catch (error) {
         // Håndterer fejl
-        errorResponse(res, `Error updating user`, error);
+        errorResponse(res, `Error updating user: ${error}`);
+    }
+});
+
+/**
+ * UPDATE: Update an existing field
+ */
+userController.patch(`/${url}/:id([0-9]+)`, Authorize, async (req, res) => {
+    try {
+        // Læser ID fra URL
+        const { id } = req.params;
+        // Henter data fra request body
+        const { password, confirmPassword } = req.body;
+        // Validate password exists
+        if (!password) {
+            return errorResponse(res, `Password is required`, 400);
+        }        
+        // Optional: Validate password confirmation
+        if (confirmPassword && password !== confirmPassword) {
+            return errorResponse(res, `Passwords do not match`, 400);
+        }
+
+        // Update record 
+        const [updated] = await model.update({ password }, {
+            where: { id }, 
+            individualHooks: true // Åbner for hooks i modellen
+        });
+        
+        // Fejl hvis ingen record findes
+        if (!updated) return errorResponse(res, `No user found with ID: ${id}`, 404); 
+        // Returnerer succesrespons
+        successResponse(res, { id }, `Password updated successfully`); 
+    } catch (error) {
+        // Error handling
+        errorResponse(res, `Error updating user: ${error}`);
     }
 });
 
