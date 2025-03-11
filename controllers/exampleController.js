@@ -1,7 +1,7 @@
 import express from 'express';
 import { exampleModel as model } from '../models/exampleModel.js';
 import { errorResponse, successResponse } from '../utils/responseUtils.js';
-import { userModel } from '../models/userModel.js';
+import { userModel } from '../models/index.js';
 import { getQueryAttributes, getQueryLimit, getQueryOrder } from '../utils/apiUtils.js';
 
 // Opretter en ny Express-router til denne controller

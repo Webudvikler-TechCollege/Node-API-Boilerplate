@@ -1,8 +1,7 @@
 import express from 'express';
 import dbConfig from '../config/dbConfig.js';
 import { seedFromCsv } from '../utils/seedUtils.js';
-import { userModel } from '../models/userModel.js';
-import { exampleModel } from '../models/exampleModel.js';
+import { userModel, exampleModel } from '../models/index.js';
 import { errorResponse, successResponse } from '../utils/responseUtils.js';
 
 export const dbController = express.Router();

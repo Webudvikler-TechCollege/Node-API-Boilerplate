@@ -4,16 +4,12 @@ import { dbController } from './Controllers/dbController.js'
 import { userController } from './controllers/userController.js'
 import { authController } from './controllers/authController.js'
 import { exampleController } from './controllers/exampleController.js'
-import { setRelations } from "./models/relations.js";
 
 // Express Route Settings
 const app = express()
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 app.use(cors())
-
-// Test 2025 - Sætter alle db relationer op i seperat fil
-setRelations();
 
 // Route for root
 app.get('/', (req, res) => {
