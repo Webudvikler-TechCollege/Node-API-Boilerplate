@@ -25,11 +25,15 @@ export const successResponse = (res, data, message = "Success", statusCode = 200
  */
 export const errorResponse = (res, message = "Internal Server Error", error = {}, statusCode = 500) => {    
     let obj_error = { message: message }
-    if (error.name === "SequelizeValidationError") {
+
+    //console.error(error.name)
+
+    if (error.name === "SequelizeValidationError" || error.name === "SequelizeUniqueConstraintError") {
         obj_error.sequlize_validation_errors = error.errors.map(err => ({
             field: err.path,
             message: err.message
         }));
     }
+
     res.status(statusCode).json(obj_error);
 };
