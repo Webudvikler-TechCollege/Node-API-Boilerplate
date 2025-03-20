@@ -19,13 +19,14 @@ Husk at oprette en .env fil i roden af dit repository og kopiere følgende ind i
 NB: Default bruger password er også genreret med secret string fra nedenstående kode.
 ```
 # Port Number
-PORT = 3000
+SERVERPORT = 3000
 
 # Database Credentials
 DBHOST = [localhost]
 DBNAME = [database_name]
 DBUSER = [database_user]
 DBPASSWD = [database_password]
+DBPORT = 3306
 
 # Token keys ############
 

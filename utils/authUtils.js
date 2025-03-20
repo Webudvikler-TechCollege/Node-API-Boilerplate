@@ -1,258 +1,144 @@
-import jwt from "jsonwebtoken"
-import dotenv from "dotenv" // Credentials
-import bcrypt from "bcrypt"
-import { userModel } from "../models/index.js"
-import { errorResponse, successResponse } from "./responseUtils.js"
+/**
+ * Authentication and Authorization Module
+ *
+ * This module provides authentication and authorization functionality for users.
+ * - `Authenticate`: Validates user credentials and generates JWT tokens.
+ * - `Authorize`: Middleware that checks access tokens.
+ * - `refreshAccessToken`: Generates a new access token from a refresh token.
+ * - `getUserFromToken`: Extracts user ID from a given JWT token.
+ */
 
-dotenv.config()
+import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+import bcrypt from "bcrypt";
+import { userModel } from "../models/userModel.js";
 
-const Authenticate = async (req, res) => {
-  // Destructure Assignment af username og password fra request body
-  const { username, password } = req.body
-
-  // Hvis brugernavn og password findes...
-  if (username && password) {
-    // Henter db user u d fra username
-    const user_result = await userModel.findOne({
-      attributes: ["id", "firstname", "lastname", "password"],
-      where: { email: username, is_active: 1 },
-    })
-
-    if (!user_result) {
-      // Returner forbidden hvis bruger ikke eksisterer
-      errorResponse(res, 'No user found', '', 401)
-    } else {
-      // Deklarerer user objekt af user values
-      const data = {
-        id: user_result.get("id"),
-        firstname: user_result.get("firstname"),
-        lastname: user_result.get("lastname"),
-        password: user_result.get("password"),
-      }
-
-      // Validerer krypterede passwords
-      bcrypt.compare(password, data.password, (err, result) => {
-        if (result) {
-          // REFRESH TOKEN
-
-          // Deklarerer var med udløbsdtid for refresh_token
-          // (plus foran konverterer til tal)
-          const expRefreshDate =
-            Math.floor(Date.now() / 1000) +
-            +process.env.TOKEN_REFRESH_EXPIRATION_SECS
-
-          // Genererer refresh token ud fra udløbstid, user_id og token_refresh_key
-          const refresh_token = jwt.sign(
-            {
-              exp: expRefreshDate,
-              data: { id: data.id },
-            },
-            process.env.TOKEN_REFRESH_KEY
-          )
-
-          // Updater refresh token i bruger database
-          userModel.update(
-            { refresh_token, refresh_token },
-            {
-              where: { id: data.id },
-            }
-          )
-
-          // ACCESS_TOKEN
-
-          // Deklarerer var med udløbsdtid for access_token
-          // (plus foran konverterer til tal)
-          const expAccessDate =
-            Math.floor(Date.now() / 1000) +
-            +process.env.TOKEN_ACCESS_EXPIRATION_SECS
-
-          // Deklarerer payload var af user values
-          const payload = {
-            id: data.id,
-            firstname: data.firstname,
-            lastname: data.lastname,
-            email: username,
-          }
-
-          // Genererer access token
-          const access_token = jwt.sign(
-            {
-              exp: expAccessDate,
-              data: payload,
-            },
-            process.env.TOKEN_ACCESS_KEY
-          )
-
-          // Returnerer access_token til requester
-          const token_response = {
-            access_token: access_token,
-            user: {
-              id: `${data.id}`,
-              firstname: `${data.firstname}`,
-              lastname: `${data.lastname}`
-            },
-            created: Date(),
-          }
-          successResponse(res, token_response)
-        } else {
-          // Returner 401 Unauthorized
-          errorResponse(res, 'You are not authorized', '', 401)
-        }
-      })
-    }
-  } else {
-    // Returner 403 Forbidden
-    errorResponse(res, 'You are not authorized', '', 403)
-  }
-}
+dotenv.config();
 
 /**
- * Authorize User
- * Tjekker om bruger rent faktisk har adgang via en access_token og refresh_token
- * @param {*} req
- * @param {*} res
- * @param {*} next
+ * Generates a JWT token (either access or refresh) for a user.
+ * @param {Object} user - The user object containing user details.
+ * @param {string} type - The type of token to generate ("access" or "refresh").
+ * @returns {string} - The generated JWT token.
+ */
+const generateToken = (user, type) => {
+    const expTime = Math.floor(Date.now() / 1000) + +process.env[`TOKEN_${type.toUpperCase()}_EXPIRATION_SECS`];
+    return jwt.sign({ exp: expTime, data: { id: user.id } }, process.env[`TOKEN_${type.toUpperCase()}_KEY`]);
+};
+
+/**
+ * Authenticates a user by validating their credentials and generating JWT tokens.
+ * @param {Object} req - The request object containing user credentials.
+ * @param {Object} res - The response object to send the tokens.
+ */
+const Authenticate = async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) return res.sendStatus(400); // Bad request if credentials are missing
+
+    try {
+        // Find user in the database
+        const user = await userModel.findOne({
+            attributes: ["id", "firstname", "lastname", "password"],
+            where: { email: username, is_active: 1 },
+        });
+
+        if (!user) return res.sendStatus(401); // Unauthorized if user does not exist
+
+        // Validate password using bcrypt
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return res.sendStatus(401); // Unauthorized if password is incorrect
+
+        // Generate JWT tokens
+        const refresh_token = generateToken(user, "refresh");
+        const access_token = generateToken(user, "access");
+
+        // Store the refresh token in the database
+        await userModel.update({ refresh_token }, { where: { id: user.id } });
+
+        // Send only access_token and user data
+        return res.json({
+            access_token,
+            refresh_token,
+            user: { id: user.id, firstname: user.firstname, lastname: user.lastname },
+        });
+    } catch (error) {
+        return res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
+/**
+ * Middleware to authorize user requests by validating JWT access tokens.
+ * @param {Object} req - The request object containing the access token.
+ * @param {Object} res - The response object to send error messages.
+ * @param {Function} next - Calls the next middleware if the user is authorized.
  */
 const Authorize = async (req, res, next) => {
-  // Henter access token fra auth header
-  const bearerHeader = req.headers["authorization"]
-  let access_token;
-
-  if (bearerHeader && bearerHeader.includes('Bearer')) {
-    access_token = bearerHeader.substr(7) // Remove "Bearer "  
-  } else {
-    errorResponse(res, 'Token not accepted', '', 401)
-  }
-
-  // Bekræfter access_token med access_key
-  jwt.verify(access_token, process.env.TOKEN_ACCESS_KEY, (err, data) => {
-    if (err) {
-      switch (err.message) {
-        case "jwt malformed":
-        case "invalid algorithm":
-        case "invalid signature":
-          // Returnerer statuskode (403: Forbidden)
-          errorResponse(res, err.message, '', 403)
-          break
-        case "jwt expired":
-          // Refresh token
-          // Decoder auth token med access_key
-          // Dette returnerer et objekt med brugerdata
-          // og her henter vi bruger id
-          const { id } = jwt.decode(
-            access_token,
-            process.env.TOKEN_ACCESS_KEY
-          ).data
-          // Henter db bruger ud fra id
-          userModel.findOne({
-            where: { id: id, is_active: 1 },
-          }).then(record => {
-            if (!record?.refresh_token) {
-              // Returnerer statuskode (400: Bad Request)
-              errorResponse(res, 'Refresh token is missing', '', 400)
-            } else {
-              // Bekræfter brugers refresh_token
-              jwt.verify(
-                record.refresh_token,
-                process.env.TOKEN_REFRESH_KEY,
-                (err, data) => {
-                  if (err) {
-                    switch (err.message) {
-                      case "jwt expired":
-                      case "jwt malformed":
-                        // Returerner besked om at refresh_token er udløbet
-                        // Betyder at bruger skal logge ind igen
-                        errorResponse(res, 'Refresh token malformed or expired. Please login again.', '', 400)
-                        break
-                      case "invalide token":
-                        // Returnerer statuskode (400: Bad Request)
-                        errorResponse(res, 'Invalid token', '', 400)
-                        break
-                    }
-                  } else {
-                    // Genererer ny access token
-
-                    // Deklarerer var med udløbsdtid for access_token
-                    // (plus foran konverterer til tal)
-                    const expDate =
-                      Math.floor(Date.now() / 1000) +
-                      +process.env.TOKEN_ACCESS_EXPIRATION_SECS
-
-                    // Deklarerer payload var ud fra brugers db data
-                    const payload = {
-                      id: id,
-                      firstname: record.firstname,
-                      lastname: record.lastname,
-                      email: record.email,
-                    }
-
-                    // Genererer token ud fra payload og access tid
-                    const access_token = jwt.sign(
-                      {
-                        exp: expDate,
-                        data: payload,
-                      },
-                      process.env.TOKEN_ACCESS_KEY
-                    )
-                    
-                    const token_message = {
-                      access_token: access_token,
-                      updated: Date(),
-                    }
-                    // Returnerer access_token til requester
-                    successResponse(res, token_message)
-                    next()
-                  }
-                }
-              )
-            }
-          })
-          break
-      }
-    } else {
-      // Sender bruger videre til næste trin i router
-      next()
+    const bearerHeader = req.headers["authorization"];
+    if (!bearerHeader || !bearerHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ message: "Token not accepted" });
     }
-  })
-}
+
+    const token = bearerHeader.split(" ")[1];
+
+    try {
+        // Verify the access token
+        const decoded = jwt.verify(token, process.env.TOKEN_ACCESS_KEY);
+        req.user = decoded.data;
+        next();
+    } catch (err) {
+        return res.status(403).json({ message: err.message }); // Forbidden if token is invalid
+    }
+};
 
 /**
- * Metode til at hente bruger id ud fra en token
- * @param {*} req 
- * @param {*} res 
- * @returns 
+ * Refreshes an expired access token using a valid refresh token.
+ * @param {Object} req - The request object containing the refresh token.
+ * @param {Object} res - The response object to send the new access token.
+ */
+const refreshAccessToken = async (req, res) => {
+    const { refresh_token } = req.body;
+    if (!refresh_token) {
+        return res.status(400).json({ message: "Refresh token is required" });
+    }
+
+    try {
+        // Find user by refresh token
+        const user = await userModel.findOne({ where: { refresh_token } });
+
+        if (!user) {
+            return res.status(400).json({ message: "Invalid refresh token" });
+        }
+
+        // Verify refresh token
+        jwt.verify(refresh_token, process.env.TOKEN_REFRESH_KEY);
+
+        // Generate new access token
+        const access_token = generateToken(user, "access");
+
+        return res.json({ access_token });
+    } catch (err) {
+        return res.status(403).json({ message: "Invalid or expired refresh token" });
+    }
+};
+
+/**
+ * Extracts the user ID from a JWT access token.
+ * @param {Object} req - The request object containing the access token.
+ * @param {Object} res - The response object to send the extracted user ID.
  */
 const getUserFromToken = async (req, res) => {
-  const bearerHeader = req.headers["authorization"];
+    const bearerHeader = req.headers["authorization"];
+    if (!bearerHeader || !bearerHeader.startsWith("Bearer ")) {
+        return res.sendStatus(401); // Unauthorized if token is missing
+    }
 
-  if (bearerHeader && bearerHeader.includes('Bearer ')) {
-    const token = bearerHeader.split(' ')[1]
     try {
-      const decodeToken = jwt.verify(token, process.env.TOKEN_ACCESS_KEY)
-      const user_id = await decodeToken.data.id
-      console.log(user_id);
-      return user_id
-    } catch (err) {
-      console.error(err)
+        const token = bearerHeader.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.TOKEN_ACCESS_KEY);
+        return res.json({ userId: decoded.data.id });
+    } catch {
+        return res.status(401).json({ message: "Invalid token" }); // Unauthorized if token is invalid
     }
-  }
-}
+};
 
-
-/**
- * Decode token - NOT IN USE
- * @param {*} token 
- */
-const decodeToken = async (token) => {
-  jwt.verify(token, process.env.TOKEN_REFRESH_KEY, (err, decoded) => {
-    if (err) {
-      console.error('JWT verification error:', err);
-      // Handle error, e.g., token is invalid or expired
-    } else {
-      const payload = decoded;
-      console.log('Decoded payload:', payload);
-    }
-  });
-}
-
-export { Authenticate, Authorize, getUserFromToken }
+export { Authenticate, Authorize, refreshAccessToken, getUserFromToken };

@@ -28,6 +28,11 @@ exampleModel.init({
     type: DataTypes.TEXT,
     allowNull: true
   },
+  // String-felt med en standardværdi og længdevalidering
+  image_field: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
   // Dato-felt med validering for at sikre en gyldig dato
   date_field: {
     type: DataTypes.DATE,
